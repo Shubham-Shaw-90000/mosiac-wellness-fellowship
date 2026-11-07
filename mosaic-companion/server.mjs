@@ -25,6 +25,38 @@ const checkInResponseSchema = {
 };
 const clean = (value, max = 280) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
 const sendJson = (res, status, payload) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(payload)); };
+const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+function upstreamStatus(error) {
+  const direct = Number(error?.status || error?.code || error?.error?.code);
+  if (Number.isInteger(direct)) return direct;
+  try { return Number(JSON.parse(String(error?.message || '')).error?.code) || 0; } catch { return 0; }
+}
+
+async function generateWithRetry(request) {
+  const attempts = 3;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try { return await aiClient().models.generateContent(request); }
+    catch (error) {
+      const status = upstreamStatus(error);
+      const retryable = [429, 500, 502, 503, 504].includes(status);
+      if (!retryable) throw error;
+      if (attempt === attempts - 1) {
+        const message = status === 503
+          ? 'Gemini is temporarily busy. Please try your check-in again in a moment.'
+          : status === 429
+            ? 'Too many requests were made. Please wait a moment and try again.'
+            : 'The AI service is temporarily unavailable. Please try again shortly.';
+        const transientError = new Error(message);
+        transientError.status = status;
+        throw transientError;
+      }
+      const delay = 700 * (2 ** attempt) + Math.round(Math.random() * 250);
+      console.warn(`[Gemini transient ${status}] retrying in ${delay}ms (attempt ${attempt + 1}/${attempts})`);
+      await wait(delay);
+    }
+  }
+}
 
 function parseModelJson(response) {
   const raw = String(response?.text || '').trim();
@@ -61,7 +93,7 @@ function aiClient() { if (!process.env.GEMINI_API_KEY) throw new Error('Server s
 async function checkIn(body) {
   if (!/^[A-Za-z0-9+/=]+$/.test(body.imageBase64 || '') || body.imageBase64.length > 1_450_000) throw new Error('Please upload one valid compressed image.');
   const journey = compactJourney(body.journey, body.products);
-  const response = await aiClient().models.generateContent({
+  const response = await generateWithRetry({
     model: GEMINI_MODEL,
     contents: [{ role: 'user', parts: [{ text: `USER JOURNEY=${JSON.stringify(journey)}\nGive one concise, caring check-in from this photo. Use the user's exact selected products and intended routine to make the three steps useful today. Refer to their day or recent trend only if it clarifies the advice. State a photo limitation rather than guessing.` }, { inlineData: { mimeType: 'image/jpeg', data: body.imageBase64 } }] }],
     config: { systemInstruction: `${systemSafety} Use concise language and populate every response field.`, responseMimeType: 'application/json', responseSchema: checkInResponseSchema, thinkingConfig: { thinkingLevel: 'low' }, maxOutputTokens: 1024 }
@@ -74,7 +106,7 @@ async function chat(body) {
   const message = clean(body.message, 500);
   if (!message) throw new Error('Write a question for your companion.');
   const history = Array.isArray(body.history) ? body.history.slice(-6).map(item => `${item.role === 'assistant' ? 'COMPANION' : 'USER'}: ${clean(item.text, 360)}`).join('\n') : '';
-  const response = await aiClient().models.generateContent({
+  const response = await generateWithRetry({
     model: GEMINI_MODEL,
     contents: [{ role: 'user', parts: [{ text: `USER JOURNEY=${JSON.stringify(journey)}\nRECENT CONVERSATION:\n${history}\nUSER: ${message}\nReply in under 90 words as a continuation of this user's journey. Be kind, practical and specific to their selected products, routine and day when relevant. Do not repeat their full regimen. If safety escalation applies, lead with it.` }] }],
     config: { systemInstruction: systemSafety, thinkingConfig: { thinkingLevel: 'low' }, maxOutputTokens: 512 }

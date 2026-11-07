@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-deep-forest: #14100C; /* Earthy Dark Espresso / Warm Deep Wood */
+    --bg-card: #211B15;        /* Deep Walnut */
+    --bg-card-hover: #2B231C;  /* Muted Cedar */
+    --accent-sage: #96B894;    /* Light Forest Sage */
+    --accent-emerald: #5B8E65; /* Deep Moss Emerald */
+    --border-wood: #3D3227;    /* Subtle Bark Border */
+    --text-primary: #F4EFEA;   /* Organic Cream White */
+    --text-muted: #B8A99A;     /* Muted Birch Khaki */
+  }
+
+  body {
+    background-color: #14100C;
+    color: #F4EFEA;
+    font-family: "Manrope", "Aptos", "Segoe UI", sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background-image: 
+      radial-gradient(at 15% 15%, rgba(91, 142, 101, 0.12) 0px, transparent 50%),
+      radial-gradient(at 85% 85%, rgba(61, 50, 39, 0.35) 0px, transparent 60%);
+    background-attachment: fixed;
+  }
+}
+
+/* Custom organic scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #14100C;
+}
+::-webkit-scrollbar-thumb {
+  background: #3D3227;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #5B8E65;
+}
+
+/* Keep the journey snapshot present, but let the scanner lead the page. */
+main > section:first-child {
+  margin-bottom: 1.25rem;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+main > section:first-child > div:first-child {
+  gap: 0.75rem;
+}
+
+main > section:first-child h2 {
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+main > section:first-child p {
+  margin-top: 0.4rem;
+}
+
+main > section:first-child > div:last-child {
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  main > section:first-child {
+    padding: 1.15rem 1.25rem;
+  }
+}

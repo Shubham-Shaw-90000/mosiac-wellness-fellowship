@@ -1,0 +1,11 @@
+# Runtime secrets and generated application files
+mosaic-companion/.env
+mosaic-companion/node_modules/
+mosaic-companion/dist/
+Microsoft/
+test*.jpg
+test*.webp
+
+# Customer contact details must not be published with the source code
+Part1_Customer_Conversations.md
+Part1_Customer_Conversations.html
